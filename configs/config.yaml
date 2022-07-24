@@ -1,0 +1,4 @@
+task: train
+defaults:
+  - data: default
+  - model: alpha
