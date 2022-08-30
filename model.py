@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, Union, List
 
 import logging
 
 from transformers import AutoModel
 import pytorch_lightning as pl
 from torch import nn
+import torch.nn.functional as F
 import torch
 
 from omegaconf import DictConfig
@@ -48,8 +49,43 @@ class RestorationModel(pl.LightningModule):
             raise ValueError('unknown head architecture')
 
     def training_step(self, batch, batch_idx):
-        pass
+        x, y = batch
+        x = x.view(x.size(0), -1)
+        z = self.encoder(x)
+        y_hat = self.head(z)
+        loss = F.cross_entropy(y_hat, y)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        x = x.view(x.size(0), -1)
+        z = self.encoder(x)
+        y_hat = self.head(z)
+        
+        val_loss = F.cross_entropy(y_hat, y)
+        self.log('val_loss', val_loss)
+
+        pred = torch.argmax(F.softmax(y_hat, dim=1), dim=1)
+
+        return pred, y
+
+    # FIXME shouldn't it be validation_step_end instead? https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#validating-with-dataparallel
+    def validation_epoch_end(self, validation_step_outputs) -> None:
+        print(validation_step_outputs)
+        all_preds = torch.stack(validation_step_outputs)
+
+        # TODO calculate and log metrics
+
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        x = x.view(x.size(0), -1)
+        z = self.encoder(x)
+        y_hat = self.head(z)
+        test_loss = F.cross_entropy(y_hat, y)
+        self.log('test_loss', test_loss)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.training.learning_rate)
-        return super().configure_optimizers()
+        return optimizer

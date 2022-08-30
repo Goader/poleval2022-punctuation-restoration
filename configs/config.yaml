@@ -2,3 +2,5 @@ task: train
 defaults:
   - data: default
   - model: alpha
+  - trainer: default
+  - _self_

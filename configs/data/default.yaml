@@ -1,3 +1,4 @@
-train: data/train.tsv
-dev: data/dev.tsv
-test: data/test.tsv
+train: data/rest/train.json
+val: data/rest/val.json
+test: data/rest/test.json
+predict: data/rest/test.json

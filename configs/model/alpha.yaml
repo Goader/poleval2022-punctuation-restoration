@@ -1,5 +1,6 @@
 encoder:
   name: "allegro/herbert-base-cased"
+  tokenizer: "allegro/herbert-base-cased"
 head:
   architecture: "mlp"
   mlp:
