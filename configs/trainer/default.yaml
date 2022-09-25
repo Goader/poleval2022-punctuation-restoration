@@ -3,3 +3,8 @@ val_batch_size: 16
 test_batch_size: 32
 predict_batch_size: 32
 max_seq_len: 128
+learning_rate: 0.1
+accelerator: cpu
+devices: 1  # TODO for cpu https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#num-processes
+zero_class_weight: 0.1
+max_epochs: 100

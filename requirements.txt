@@ -1,0 +1,4 @@
+transformers==4.21.3
+torch==1.12.1
+pytorch-lightning==1.7.5
+hydra-core==1.2.0

@@ -1,21 +1,41 @@
-from omegaconf import DictConfig, OmegaConf
-import hydra
-
 import logging
+
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+import pytorch_lightning as pl
+
+from datamodule import PunctuationRestorationDataModule
+from model import RestorationModel
+from callbacks import MetricsLoggingCallback
+
 
 logger = logging.getLogger(__name__)
 
 
-def train():
-    pass
+def train(cfg: DictConfig):
+    datamodule = PunctuationRestorationDataModule(cfg)
+    datamodule.setup()
+    model = RestorationModel(cfg, num_classes=datamodule.num_classes)
+    trainer = pl.Trainer(
+        accelerator=cfg.trainer.accelerator,
+        devices=cfg.trainer.devices,
+        max_epochs=cfg.trainer.max_epochs,
+        callbacks=[MetricsLoggingCallback()]
+    )
+    trainer.fit(model, datamodule=datamodule)
 
 
-def evaluate():
-    pass
+def evaluate(cfg: DictConfig):
+    datamodule = PunctuationRestorationDataModule(cfg)
+    datamodule.setup('test')
+    model = RestorationModel(cfg, num_classes=datamodule.num_classes)
 
 
-def inference():
-    pass
+def inference(cfg: DictConfig):
+    datamodule = PunctuationRestorationDataModule(cfg)
+    datamodule.setup('predict')
+    model = RestorationModel(cfg, num_classes=datamodule.num_classes)
 
 
 @hydra.main(config_path='configs', config_name='config', version_base=None)
