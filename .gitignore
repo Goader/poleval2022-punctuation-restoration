@@ -131,3 +131,6 @@ outputs/*
 **/.idea/
 data/
 lightning_logs/
+
+punctuation-restoration/
+wandb/

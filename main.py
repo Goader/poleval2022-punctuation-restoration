@@ -4,6 +4,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
 
 from datamodule import PunctuationRestorationDataModule
 from model import RestorationModel
@@ -17,8 +18,10 @@ def train(cfg: DictConfig):
     datamodule = PunctuationRestorationDataModule(cfg)
     datamodule.setup()
     model = RestorationModel(cfg, num_classes=datamodule.num_classes)
+    wandb_logger = WandbLogger(project="punctuation-restoration")
     trainer = pl.Trainer(
         accelerator=cfg.trainer.accelerator,
+        logger=wandb_logger,
         devices=cfg.trainer.devices,
         max_epochs=cfg.trainer.max_epochs,
         callbacks=[MetricsLoggingCallback()]

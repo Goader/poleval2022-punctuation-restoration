@@ -37,7 +37,7 @@ class RestorationModel(pl.LightningModule):
     @staticmethod
     def _init_weights(module: nn.Module):
         if isinstance(module, nn.Linear):
-            torch.nn.init.xavier_uniform(module.weight)
+            torch.nn.init.xavier_uniform_(module.weight)
             module.bias.data.fill_(0.01)
 
     def _construct_head(self) -> nn.Module:
@@ -101,12 +101,13 @@ class RestorationModel(pl.LightningModule):
         return metrics
 
     def common_step(self, batch) -> (List[torch.Tensor], List[torch.Tensor], float):
-        first_token_pos, model_inputs_batch, label_ids_batch = batch
+        doc_ids, first_token_pos, original_token_pos, model_inputs_batch, label_ids_batch = batch
 
         batch_preds = []
         batch_golds = []
         loss = 0
 
+        # fixme this should be done in one batch, right?
         for model_inputs, label_ids in zip(model_inputs_batch, label_ids_batch):
             encoded = self.encoder(
                 input_ids=model_inputs['input_ids'].unsqueeze(0),
@@ -118,6 +119,9 @@ class RestorationModel(pl.LightningModule):
 
             batch_preds.append(logits)
             batch_golds.append(label_ids)
+
+            print(logits)
+            print(label_ids)
 
             loss += F.cross_entropy(logits, label_ids, weight=self.loss_weights)
 
