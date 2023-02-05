@@ -2,7 +2,7 @@ from typing import Any, List, Dict
 
 import logging
 
-from transformers import AutoModel
+from transformers import AutoModel, BatchEncoding
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_info
 from torch import nn
@@ -27,7 +27,11 @@ class RestorationModel(pl.LightningModule):
         self.num_classes = num_classes
         self.save_hyperparameters(cfg)
 
-        self.loss_weights = torch.tensor([self.hparams.trainer.zero_class_weight] + [1.0 for _ in range(self.num_classes - 1)])
+        self.loss_weights = torch.tensor(
+            [self.hparams.trainer.zero_class_weight] \
+            + [1.0 for _ in range(self.num_classes - 1)]
+        )
+        self.loss = nn.CrossEntropyLoss(self.loss_weights)
 
         self.encoder = AutoModel.from_pretrained(cfg.model.encoder.name)
         self.head = self._construct_head()
@@ -100,30 +104,35 @@ class RestorationModel(pl.LightningModule):
         })
         return metrics
 
-    def common_step(self, batch) -> (List[torch.Tensor], List[torch.Tensor], float):
-        doc_ids, first_token_pos, original_token_pos, model_inputs_batch, label_ids_batch = batch
+    def common_step(
+            self,
+            batch: tuple[list[int], list[list[int]], list[list[int]], BatchEncoding, torch.LongTensor]
+    ) -> (List[torch.Tensor], List[torch.Tensor], float):
+        doc_ids, first_token_pos, original_token_pos, batch_encoding, labels = batch
+        batch_size = labels.shape[0]
 
-        batch_preds = []
-        batch_golds = []
-        loss = 0
+        encoded = self.encoder(
+            input_ids=batch_encoding.data['input_ids'],
+            attention_mask=batch_encoding.data['attention_mask'],
+            return_dict=True
+        )['last_hidden_state']
 
-        # fixme this should be done in one batch, right?
-        for model_inputs, label_ids in zip(model_inputs_batch, label_ids_batch):
-            encoded = self.encoder(
-                input_ids=model_inputs['input_ids'].unsqueeze(0),
-                attention_mask=model_inputs['attention_mask'].unsqueeze(0),
-                return_dict=True
-            )['last_hidden_state'].squeeze()
+        logits = F.softmax(self.head(encoded), dim=-1)
 
-            logits = self.head(encoded)
+        attention_mask = batch_encoding.data['attention_mask']
 
-            batch_preds.append(logits)
-            batch_golds.append(label_ids)
+        active_loss = attention_mask.view(-1) == 1
+        active_logits = logits.view(-1, self.num_classes)
+        active_labels = torch.where(
+            active_loss,
+            labels.view(-1),
+            torch.tensor(self.loss.ignore_index).type_as(labels)
+        )
 
-            print(logits)
-            print(label_ids)
+        loss = self.loss(active_logits, active_labels)
 
-            loss += F.cross_entropy(logits, label_ids, weight=self.loss_weights)
+        batch_preds = [logits[i, torch.nonzero(attention_mask[i])].squeeze() for i in range(batch_size)]
+        batch_golds = [labels[i, torch.nonzero(attention_mask[i])].squeeze() for i in range(batch_size)]
 
         return batch_preds, batch_golds, loss
 
@@ -143,6 +152,7 @@ class RestorationModel(pl.LightningModule):
         }
 
     # FIXME shouldn't it be validation_step_end instead? https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#validating-with-dataparallel
+    # FIXME revise this function!!
     def validation_epoch_end(self, validation_step_outputs: ValidationEpochOutputs) -> None:
         # TODO as a future feature we can aggregate results for each dataloader separately
         # flattening outputs from dataloaders if there are multiple

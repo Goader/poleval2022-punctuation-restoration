@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from pytorch_lightning.utilities.types import TRAIN_DATALOADERS, EVAL_DATALOADERS
 from pytorch_lightning.utilities import rank_zero_info
-from transformers import PreTrainedTokenizer, AutoTokenizer
+from transformers import PreTrainedTokenizer, AutoTokenizer, BatchEncoding
 
 import tqdm
 from omegaconf import DictConfig
@@ -49,6 +49,7 @@ class DatasetItem:
 
 
 # TODO update comments regarding the variables' names change
+# FIXME check what if we are starting with first token having only one subtoken, and the next having window_size
 def windowed_tokens(
         first_subtoken_pos: list[int],
         original_token_pos: list[int],
@@ -171,7 +172,7 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
             data = json.load(f)
 
         items: List[DatasetItem] = []
-        for document_id, document in enumerate(tqdm.tqdm(data[:100], desc='preprocessing documents')):
+        for document_id, document in enumerate(tqdm.tqdm(data, desc='preprocessing documents')):
             first_subtoken_pos: list[int] = []
             original_token_ids: list[int] = []
             token_ids: list[int] = []
@@ -305,17 +306,27 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
                           num_workers=3)
 
     def collator(self, batch: Iterable[DatasetItem]) \
-            -> Tuple[List[int], List[List[int]], List[List[int]], List[torch.Tensor], List[torch.Tensor]]:
+            -> tuple[list[int], list[list[int]], list[list[int]], BatchEncoding, torch.LongTensor]:
+
         doc_ids = [item.doc_id for item in batch]
         first_subtoken_pos = [item.first_subtoken_pos for item in batch]
         original_token_pos = [item.original_token_pos for item in batch]
-        token_ids = [item.token_ids for item in batch]
-        label_ids = [torch.tensor(item.label_ids) for item in batch]
 
-        padded_token_ids = [self.tokenizer.pad(
-            {'input_ids': tokens},
+        token_ids = [
+            [self.tokenizer.cls_token_id] + item.token_ids + [self.tokenizer.sep_token_id]
+            for item in batch
+        ]  # fixme is this cls and sep token ok?
+        batch_encoding = self.tokenizer.pad(
+            {'input_ids': token_ids},
             padding='longest',
-            return_tensors='pt'
-        ) for tokens in token_ids]
+            return_tensors='pt',
+            return_attention_mask=True
+        )
 
-        return doc_ids, first_subtoken_pos, original_token_pos, padded_token_ids, label_ids
+        pad_len = batch_encoding.data['input_ids'].shape[1]  # fixme safer way of getting seq len?
+        padded_label_ids = torch.tensor([
+            item.label_ids + [0] * (pad_len - len(item.label_ids))
+            for item in batch
+        ], dtype=torch.long)
+
+        return doc_ids, first_subtoken_pos, original_token_pos, batch_encoding, padded_label_ids
