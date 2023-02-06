@@ -24,7 +24,9 @@ def train(cfg: DictConfig):
         logger=wandb_logger,
         devices=cfg.trainer.devices,
         max_epochs=cfg.trainer.max_epochs,
-        callbacks=[MetricsLoggingCallback()]
+        callbacks=[MetricsLoggingCallback()],
+        # fast_dev_run=True,
+        # overfit_batches=1,
     )
     trainer.fit(model, datamodule=datamodule)
 

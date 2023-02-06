@@ -138,9 +138,11 @@ class RestorationModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         preds, golds, loss = self.common_step(batch)
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, batch_size=len(preds))  # FIXME is this correct batch_size?
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, batch_size=len(preds))
         return {
-            'loss': loss
+            'loss': loss,
+            'preds': preds,
+            'golds': golds
         }
 
     def validation_step(self, batch, batch_idx):
@@ -152,7 +154,6 @@ class RestorationModel(pl.LightningModule):
         }
 
     # FIXME shouldn't it be validation_step_end instead? https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#validating-with-dataparallel
-    # FIXME revise this function!!
     def validation_epoch_end(self, validation_step_outputs: ValidationEpochOutputs) -> None:
         # TODO as a future feature we can aggregate results for each dataloader separately
         # flattening outputs from dataloaders if there are multiple
@@ -186,5 +187,6 @@ class RestorationModel(pl.LightningModule):
         self.log('test_loss', loss)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.trainer.learning_rate)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, eps=1e-8)
+        # optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.trainer.learning_rate)
         return optimizer
