@@ -18,14 +18,22 @@ def train(cfg: DictConfig):
     datamodule = PunctuationRestorationDataModule(cfg)
     datamodule.setup()
     model = RestorationModel(cfg, num_classes=datamodule.num_classes)
+
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        save_top_k=5,
+        monitor="val_f1",
+        mode="max",
+        dirpath="outputs/",
+        filename="punctuation-restoration-{epoch:03d}-{val_f1:.2f}",
+    )
     wandb_logger = WandbLogger(project="punctuation-restoration")
     trainer = pl.Trainer(
         accelerator=cfg.trainer.accelerator,
         logger=wandb_logger,
         devices=cfg.trainer.devices,
         max_epochs=cfg.trainer.max_epochs,
-        default_root_dir='output',
-        callbacks=[MetricsLoggingCallback()],
+        # default_root_dir='output',
+        callbacks=[MetricsLoggingCallback(), checkpoint_callback],
         # fast_dev_run=True,
         # overfit_batches=1,
     )
