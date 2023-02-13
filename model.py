@@ -69,7 +69,7 @@ class RestorationModel(pl.LightningModule):
         else:
             raise ValueError('unknown head architecture')
 
-    def _calculate_metrics(self, preds: npt.NDArray[np.int], golds: npt.NDArray[np.int]) -> Dict[str, Any]:
+    def _calculate_metrics(self, preds: npt.NDArray[int], golds: npt.NDArray[int]) -> Dict[str, Any]:
         labels = list(range(1, self.trainer.datamodule.num_classes))
         pr_micro, rc_micro, f1_micro, _ = \
             precision_recall_fscore_support(golds, preds, average='micro', zero_division=0, labels=labels)

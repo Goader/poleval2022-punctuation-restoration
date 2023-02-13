@@ -134,3 +134,6 @@ lightning_logs/
 
 punctuation-restoration/
 wandb/
+data/*
+data
+output

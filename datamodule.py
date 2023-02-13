@@ -172,7 +172,7 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
             data = json.load(f)
 
         items: List[DatasetItem] = []
-        for document_id, document in enumerate(tqdm.tqdm(data[:7500], desc='preprocessing documents')):
+        for document_id, document in enumerate(tqdm.tqdm(data[:], desc='preprocessing documents')):
             first_subtoken_pos: list[int] = []
             original_token_ids: list[int] = []
             token_ids: list[int] = []

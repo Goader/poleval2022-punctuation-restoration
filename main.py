@@ -24,6 +24,7 @@ def train(cfg: DictConfig):
         logger=wandb_logger,
         devices=cfg.trainer.devices,
         max_epochs=cfg.trainer.max_epochs,
+        default_root_dir='output',
         callbacks=[MetricsLoggingCallback()],
         # fast_dev_run=True,
         # overfit_batches=1,
@@ -55,7 +56,7 @@ def main(cfg: DictConfig):
 
     elif cfg.task == 'inference':
         inference(cfg)
-        
+
     else:
         raise ValueError('unknown task, can be either `train` or `evaluate`')
 
