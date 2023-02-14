@@ -21,9 +21,9 @@ def train(cfg: DictConfig):
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=5,
-        monitor="val_f1",
+        monitor="f1_weighted",
         mode="max",
-        dirpath="outputs/",
+        dirpath="output/",
         filename="punctuation-restoration-{epoch:03d}-{val_f1:.2f}",
     )
     wandb_logger = WandbLogger(project="punctuation-restoration")
