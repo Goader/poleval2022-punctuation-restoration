@@ -28,10 +28,13 @@ class RestorationModel(pl.LightningModule):
         self.save_hyperparameters(cfg)
 
         self.loss_weights = torch.tensor(
-            [self.hparams.trainer.zero_class_weight] \
-            + [1.0 for _ in range(self.num_classes - 1)]
+            [self.hparams.trainer.zero_class_weight]
+            + self.hparams.trainer.loss_weights
         )
         self.loss = nn.CrossEntropyLoss(self.loss_weights)
+
+        assert len(self.loss_weights) == self.num_classes, \
+            'number of loss weights is not equal to the number of classes'
 
         self.encoder = AutoModel.from_pretrained(cfg.model.encoder.name)
         self.head = self._construct_head()

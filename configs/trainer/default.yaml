@@ -8,4 +8,5 @@ learning_rate: 0.1
 accelerator: gpu
 devices: 1  # TODO for cpu https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#num-processes
 zero_class_weight: 0.05
+loss_weights: [0.4, 0.6, 1.0, 1.0, 1.0, 1.0]
 max_epochs: 50

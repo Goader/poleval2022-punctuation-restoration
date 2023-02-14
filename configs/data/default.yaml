@@ -2,4 +2,4 @@ train: data/rest/train.json
 val: data/rest/val.json
 test: data/rest/test.json
 predict: data/rest/test.json
-num_workers: 2
+num_workers: 1
