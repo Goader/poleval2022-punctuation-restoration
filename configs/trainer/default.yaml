@@ -5,8 +5,10 @@ predict_batch_size: 256
 max_seq_len: 128
 stride: 0.8
 learning_rate: 0.1
+weight_decay: 0.01
 accelerator: gpu
 devices: 1  # TODO for cpu https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#num-processes
 zero_class_weight: 0.015
 loss_weights: [0.4, 0.6, 1.0, 1.0, 1.0, 1.0]
 max_epochs: 150
+checkpoint_path: null

@@ -1,4 +1,5 @@
 task: train
+seed: 0
 defaults:
   - data: default
   - model: alpha

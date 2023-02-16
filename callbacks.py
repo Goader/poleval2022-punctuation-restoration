@@ -12,5 +12,5 @@ class MetricsLoggingCallback(pl.Callback):
         weighted_precision = trainer.callback_metrics['pr_micro']
         weighted_f1 = trainer.callback_metrics['f1_weighted']
 
-        rank_zero_info(f'micro // f1: {100*micro_f1:.2f}, recall: {100*micro_recall:.2f}, precision: {100*micro_precision:.2f}')
-        rank_zero_info(f'weighted // f1: {100*weighted_f1:.2f}, recall: {100*weighted_recall:.2f}, precision: {100*weighted_precision:.2f}')
+        rank_zero_info(f'micro // precision: {100*micro_precision:.2f}, recall: {100*micro_recall:.2f}, f1: {100*micro_f1:.2f}')
+        rank_zero_info(f'weighted // precision: {100*weighted_precision:.2f}, recall: {100*weighted_recall:.2f}, f1: {100*weighted_f1:.2f}')

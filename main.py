@@ -39,7 +39,7 @@ def train(cfg: DictConfig):
         monitor="f1_weighted",
         mode="max",
         dirpath="output/",
-        filename="punctuation-restoration-{epoch:03d}-{val_f1:.2f}",
+        filename="punctuation-restoration-{epoch:03d}-{f1_weighted:.4f}",
     )
     wandb_logger = WandbLogger(project="punctuation-restoration")
     trainer = pl.Trainer(
@@ -52,7 +52,8 @@ def train(cfg: DictConfig):
         # fast_dev_run=True,
         # overfit_batches=1,
     )
-    trainer.fit(model, datamodule=datamodule)
+    # if no checkpoint_path is passed, then it is None, thus the model will start from the very beginning
+    trainer.fit(model, datamodule=datamodule, ckpt_path=cfg.trainer.checkpoint_path)
 
 
 def evaluate(cfg: DictConfig):
@@ -70,6 +71,8 @@ def inference(cfg: DictConfig):
 @hydra.main(config_path='configs', config_name='config', version_base=None)
 def main(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
+
+    pl.seed_everything(cfg.seed)
 
     if cfg.task == 'train':
         train(cfg)

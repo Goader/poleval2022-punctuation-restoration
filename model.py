@@ -149,7 +149,8 @@ class RestorationModel(pl.LightningModule):
         }
 
     def validation_step(self, batch, batch_idx):
-        preds, golds, loss = self.common_step(batch)
+        with torch.no_grad():
+            preds, golds, loss = self.common_step(batch)
         self.log('val_loss', loss, batch_size=len(preds))
         return {
             'preds': preds,
@@ -186,9 +187,14 @@ class RestorationModel(pl.LightningModule):
         self.log_dict(metrics, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
-        preds, golds, loss = self.common_step(batch)
+        with torch.no_grad():
+            preds, golds, loss = self.common_step(batch)
         self.log('test_loss', loss)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.trainer.learning_rate, eps=1e-8)  # TODO add eps to the hyperparameters config
+        optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=self.hparams.trainer.learning_rate,
+            weight_decay=self.hparams.trainer.weight_decay
+        )
         return optimizer
