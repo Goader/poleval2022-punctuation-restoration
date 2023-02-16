@@ -190,6 +190,5 @@ class RestorationModel(pl.LightningModule):
         self.log('test_loss', loss)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, eps=1e-8)
-        # optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.trainer.learning_rate)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.trainer.learning_rate, eps=1e-8)  # TODO add eps to the hyperparameters config
         return optimizer

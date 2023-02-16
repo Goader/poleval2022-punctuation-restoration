@@ -19,6 +19,21 @@ def train(cfg: DictConfig):
     datamodule.setup()
     model = RestorationModel(cfg, num_classes=datamodule.num_classes)
 
+#    trainer = pl.Trainer(accelerator=cfg.trainer.accelerator, devices=1, max_epochs=cfg.trainer.max_epochs)
+
+#    lr_finder = trainer.tuner.lr_find(model)
+
+    # Results can be found in
+#    lr_finder.results
+
+    # Plot with
+#    fig = lr_finder.plot(suggest=True)
+#    fig.show()
+
+    # Pick point based on plot, or get suggestion
+#    new_lr = lr_finder.suggestion()
+#    print(new_lr)
+
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=5,
         monitor="f1_weighted",
