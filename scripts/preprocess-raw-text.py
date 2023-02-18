@@ -39,13 +39,14 @@ def preprocess_text(title: str, text: str) -> list[dict[str, Any]]:
     lines = [line.strip() for line in text.strip('\n').split('\n') if line]
     # TODO preprocess dialogs?
 
-    documents = [
-        {
-            'title': title + f'-line{i}',
-            'words': tokenize_text(line)
-        }
-        for i, line in enumerate(lines)
-    ]
+    documents = []
+    for i, line in enumerate(lines):
+        tokens = tokenize_text(line)
+        if tokens:
+            documents.append({
+                'title': title + f'-line{i}',
+                'words': tokens
+            })
 
     return documents
 
@@ -62,8 +63,6 @@ if __name__ == '__main__':
             text = f.read()
 
         documents.extend(preprocess_text(Path(filepath).name.removesuffix('.txt'), text))
-
-    print(xx)
 
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(documents, f, indent=2, ensure_ascii=False)
