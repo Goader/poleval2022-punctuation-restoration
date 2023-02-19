@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import os
+import re
 
 import torch
 import pytorch_lightning as pl
@@ -163,8 +164,36 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
     def prepare_data(self) -> None:
         pass
 
+    def _split_word_and_punctuation(self, token: str) -> tuple[str, str]:
+        # the order here is crucial, as if we match a single dot first - we will miss all the ellipses
+        for mark in self.PUNCTUATION_MARKS[::-1]:
+            if token.endswith(mark):
+                return token.removesuffix(mark), mark
+        return token, ''
+
     def _parse_tsv_input(self, filepath: Path) -> Iterable[DatasetItem]:
-        pass
+        with open(filepath, 'r', encoding='utf-8') as f:
+            lines = [line.strip().lower() for line in f.read().strip('\n').split('\n')]
+
+        items: List[DatasetItem] = []
+        for line_id, line in enumerate(tqdm.tqdm(lines, desc='preprocessing input lines')):
+            first_subtoken_pos: list[int] = []
+            original_token_ids: list[int] = []
+            token_ids: list[int] = []
+            label_ids: list[int] = []
+            for original_token_id, token in re.split(r'\s+', line):
+                word, mark = self._split_word_and_punctuation(token)
+                subtokens = self.tokenizer.tokenize(word, )  # todo limit the token length by `max_seq_len - ...`
+
+                first_subtoken_pos.append(len(token_ids))
+                original_token_ids.extend([original_token_id] * len(subtokens))
+
+                token_ids.extend(self.tokenizer.convert_tokens_to_ids(subtokens))
+                label_ids.append(self.label2idx.get(mark, 0))
+
+            items.append(DatasetItem(line_id, first_subtoken_pos, original_token_ids, token_ids, label_ids))
+
+        return items
 
     # TODO max_seq_len
     def _parse_json_input(self, filepath: Path) -> Iterable[DatasetItem]:
@@ -230,52 +259,70 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
 
         if stage is None or stage == 'train':
-            if self.cfg.data.train.endswith('.json'):
-                documents = self._parse_json_input(self.cfg.data.train)
-                windowed_documents = self.split_into_windows(documents)
-                self.train_dataset = [
-                    window
-                    for document in windowed_documents
-                    for window in document
-                ]
-            else:
-                raise NotImplementedError('unknown format')
+            documents = []
+            for filepath in self.cfg.data.train:
+                if filepath.endswith('.json'):
+                    documents.extend(self._parse_json_input(filepath))
+                elif filepath.endswith('.tsv'):
+                    documents.extend(self._parse_tsv_input(filepath))
+                else:
+                    raise NotImplementedError('unknown format')
+
+            windowed_documents = self.split_into_windows(documents)
+            self.train_dataset = [
+                window
+                for document in windowed_documents
+                for window in document
+            ]
 
         if stage is None or stage == 'val':
-            if self.cfg.data.val.endswith('.json'):
-                documents = self._parse_json_input(self.cfg.data.val)
-                windowed_documents = self.split_into_windows(documents)
-                self.val_dataset = [
-                    window
-                    for document in windowed_documents
-                    for window in document
-                ]
-            else:
-                raise NotImplementedError('unknown format')
+            documents = []
+            for filepath in self.cfg.data.train:
+                if filepath.endswith('.json'):
+                    documents.extend(self._parse_json_input(filepath))
+                elif filepath.endswith('.tsv'):
+                    documents.extend(self._parse_tsv_input(filepath))
+                else:
+                    raise NotImplementedError('unknown format')
+
+            windowed_documents = self.split_into_windows(documents)
+            self.val_dataset = [
+                window
+                for document in windowed_documents
+                for window in document
+            ]
 
         if stage is None or stage == 'test':
-            if self.cfg.data.test.endswith('.json'):
-                documents = self._parse_json_input(self.cfg.data.test)
-                windowed_documents = self.split_into_windows(documents)
-                self.test_dataset = [
-                    window
-                    for document in windowed_documents
-                    for window in document
-                ]
-            else:
-                raise NotImplementedError('unknown format')
+            documents = []
+            for filepath in self.cfg.data.train:
+                if filepath.endswith('.json'):
+                    documents.extend(self._parse_json_input(filepath))
+                elif filepath.endswith('.tsv'):
+                    documents.extend(self._parse_tsv_input(filepath))
+                else:
+                    raise NotImplementedError('unknown format')
+
+            windowed_documents = self.split_into_windows(documents)
+            self.test_dataset = [
+                window
+                for document in windowed_documents
+                for window in document
+            ]
 
         if stage is None or stage == 'predict':
             if self.cfg.data.predict.endswith('.json'):
                 documents = self._parse_json_input(self.cfg.data.predict)
-                windowed_documents = self.split_into_windows(documents)
-                self.predict_dataset = [
-                    window
-                    for document in windowed_documents
-                    for window in document
-                ]
+            elif self.cfg.data.predict.endswith('.tsv'):
+                documents = self._parse_tsv_input(self.cfg.data.predict)
             else:
                 raise NotImplementedError('unknown format')
+
+            windowed_documents = self.split_into_windows(documents)
+            self.predict_dataset = [
+                window
+                for document in windowed_documents
+                for window in document
+            ]
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(self.train_dataset,

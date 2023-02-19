@@ -1,5 +1,8 @@
-train: data/train.json
-val: data/val.json
-test: data/test.json
+train:
+  - data/train.json
+val:
+  - data/val.json
+test:
+  - data/test.json
 predict: data/test.json
 num_workers: 1
