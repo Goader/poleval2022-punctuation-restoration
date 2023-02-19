@@ -1,0 +1,9 @@
+encoder:
+  name: "allegro/herbert-large-cased"
+  tokenizer: "allegro/herbert-large-cased"
+head:
+  architecture: "mlp"
+  mlp:
+    num_layers: 3
+    num_hiddens: 256
+    nonlinearity: "relu"
