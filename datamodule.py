@@ -39,6 +39,8 @@ class DatasetItem:
     label_ids: list[int]
 
     def __post_init__(self):
+        assert self.token_ids, 'dataset item must contain at least one subtoken'
+        assert self.label_ids, 'dataset item must contain at least one high-level token'
         assert len(self.first_subtoken_pos) == len(self.label_ids), \
             'the number of tokens does not match the number of labels'
         assert len(self.first_subtoken_pos) <= len(self.token_ids), \
@@ -181,8 +183,13 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
             original_token_ids: list[int] = []
             token_ids: list[int] = []
             label_ids: list[int] = []
-            for original_token_id, token in re.split(r'\s+', line):
+            for original_token_id, token in enumerate(re.split(r'\s+', line)):
                 word, mark = self._split_word_and_punctuation(token)
+
+                # there are some "empty lines" consisting only of ellipsis, which makes no sense
+                if not word:
+                    continue
+
                 subtokens = self.tokenizer.tokenize(word, )  # todo limit the token length by `max_seq_len - ...`
 
                 first_subtoken_pos.append(len(token_ids))
@@ -191,7 +198,8 @@ class PunctuationRestorationDataModule(pl.LightningDataModule):
                 token_ids.extend(self.tokenizer.convert_tokens_to_ids(subtokens))
                 label_ids.append(self.label2idx.get(mark, 0))
 
-            items.append(DatasetItem(line_id, first_subtoken_pos, original_token_ids, token_ids, label_ids))
+            if token_ids:
+                items.append(DatasetItem(line_id, first_subtoken_pos, original_token_ids, token_ids, label_ids))
 
         return items
 
