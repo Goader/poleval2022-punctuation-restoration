@@ -1,8 +1,10 @@
 train:
-  - data/train.json
+  - data/rest/train.json
+  - data/polish-authors/train.json
+  - data/2022/train.tsv
 val:
-  - data/val.json
+  - data/2022/dev0.tsv
 test:
-  - data/test.json
+  - data/2022/dev0.tsv
 predict: data/test.json
 num_workers: 1
